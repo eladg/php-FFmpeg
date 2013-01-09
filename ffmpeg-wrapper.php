@@ -23,7 +23,7 @@ class ffmpeg_wrapper {
 
 	// array of input files, output file
 	private $input;
-	private $output;
+	public $output;
 
 	// ffmepg parameters array
 	private $global_attribs;

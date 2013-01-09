@@ -23,7 +23,7 @@ echo $ffmpeg->response() . PHP_EOL;
 <?php
 $ffmpeg = new ffmpeg_wrapper("/usr/local/bin/ffmpeg");
 
-$ffmpeg->add_input("files/video_file.mp4");           # input
+$ffmpeg->add_input("video_file.mp4");                 # input
 $ffmpeg->set_output("output.mp4");                    # output
 
 $ffmpeg->trim_range(1.2,3.3);                         # trim
@@ -36,5 +36,54 @@ $ffmpeg->video->group_of_picture(30);
 $ffmpeg->video->qscale(0);
 
 echo $ffmpeg->run() . PHP_EOL;                        #execute
+?>
+```
+
+### Concatanate inputs
+
+```php
+<?php
+
+$ffmpeg = new ffmpeg_wrapper("/usr/local/bin/ffmpeg");
+
+$ffmpeg->add_concatenate_input("input_1.mp4");        # input files...
+$ffmpeg->add_concatenate_input("input_2.mp4");
+...
+$ffmpeg->add_concatenate_input("input_n.mp4");
+$ffmpeg->set_output("concat.output.mp4");             # output
+
+$ffmpeg->video->encoding("mpeg2video");               # audio/video configuration
+$ffmpeg->video->group_of_picture(1);
+$ffmpeg->video->qscale(0);
+$ffmpeg->audio->disable();                            # disable audio
+
+echo $ffmpeg->run() . PHP_EOL;                        #execute
+?>
+```
+
+### Overlay inputs with and without filters
+
+```php
+<?php
+
+$length = 6;
+$rate   = 30;
+
+$ffmpeg = ffmpeg_presets::empty_movie("1280x720",$length,$rate);
+
+# create the video filters
+$scale_640x360 = ffmpeg_filter::scale(640,360);       
+$crop_640x360  = ffmpeg_filter::filter_with_params("crop",array(640,360,0,0), array(), array() );
+$fade_end      = ffmpeg_filter::filter_with_params("fade",array("out",$length*$rate-10,"10"), array(), array());
+
+//                                           input video  offset input filter overlay filter
+//                                                |       |   |       |            |
+//                                                v       v   v       v            v
+$ffmpeg->video_filter->overlay_with_filters("input_1.png",0  ,0,$scale_640x360, $fade_end);
+$ffmpeg->video_filter->overlay_with_filters("input_2.png",640,0,$scale_640x360, null);
+$ffmpeg->video_filter->overlay_with_filters("input_3.png",0,360,$crop_640x360);
+$ffmpeg->video_filter->overlay("input_4.png",640,360);
+
+$ffmpeg->run();
 ?>
 ```
