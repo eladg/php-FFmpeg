@@ -6,7 +6,7 @@ class ffmpeg_presets {
 
 	static public $ffmpeg_path = "/usr/local/bin/ffmpeg";
 
-	static function empty_movie($size, $rate, $length) {
+	static function empty_movie($size, $length, $rate = 30) {
 		
 		$ffmpeg = new ffmpeg_wrapper(ffmpeg_presets::$ffmpeg_path);
 
