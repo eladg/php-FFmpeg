@@ -288,6 +288,25 @@ class ffmpeg_wrapper {
 			$this->add_global_param("loglevel",$level);
 		}
 	}
+
+	public function get_input_length() {
+		throw new Exception("Can not get input length. not implemented.", 1);
+	}
+
+	public function trim($from,$length) {
+		$this->set_start_from($from);
+		$this->video->length($length);
+	}
+
+	public function trim_range($head,$tail) {
+
+		if ($tail < $head) {
+			throw new Exception("Can not trim. tail parameter ($tail) is smaller than head parameter ($head)", 1);
+		}
+
+		$this->set_start_from($head);
+		$this->video->length($tail - $head);
+	}
 }
 
 ?>
