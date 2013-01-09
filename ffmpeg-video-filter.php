@@ -38,9 +38,6 @@ class ffmpeg_video_filter {
 
 		if ($this->ffmpeg_wrapper->video_filter_complex_flag) {
 			throw new Exception("Can't add filter over complex filter", 1);
-		} else {
-			var_dump($this);
-			die();
 		}
 
 		array_push($this->filters, $new_filter);
