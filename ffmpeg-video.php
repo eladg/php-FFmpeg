@@ -62,6 +62,14 @@ class ffmpeg_video {
 		$this->add_attrib("t",$length);
 	}
 
+	public function format($format) {
+		$this->add_attrib("f",$format);
+	}
+
+	public function clear_metadata() {
+		$this->add_attrib("map_metadata","-1");
+	}
+
 }
 
 ?>
