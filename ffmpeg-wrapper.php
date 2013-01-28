@@ -301,7 +301,7 @@ class ffmpeg_wrapper {
 	}
 
 	public function add_input($input_file) {
-		array_push($this->input, new ffmpeg_parameter("i",$input_file));
+		array_push($this->input, new ffmpeg_parameter("i", "\"" . $input_file . "\""));
 		$this->last_input_info = ffmpeg_wrapper::video_stream_info($input_file);
 	}
 
