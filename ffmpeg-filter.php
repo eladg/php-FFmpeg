@@ -36,7 +36,14 @@ class ffmpeg_filter {
 	}
 
 	public function get_string() {
-		$str = $this->name . "=";
+		$str = $this->name;
+
+		if (!empty($this->values)) {
+			$str .=  "=";
+		} else {
+			return $str;
+		}
+
 		$numItems = count($this->values);
 		$i = 0;
 
