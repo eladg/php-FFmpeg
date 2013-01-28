@@ -48,9 +48,10 @@ class ffmpeg_presets {
 		$scale_flag     = false;
 		$pad_flag       = false;
 
-		$input_width  = intval($info["width"]);
-		$input_heigth = intval($info["height"]);
-		$aspect_ratio = floatval($input_width / $input_heigth);
+		$input_width      = intval($info["width"]);
+		$input_heigth     = intval($info["height"]);
+		$aspect_ratio     = round(floatval($input_width / $input_heigth),3);
+		$new_aspect_ratio = round(floatval($new_width / $new_height),3);
 
 		/**
 		 *  fix letterbox videos
@@ -83,6 +84,25 @@ class ffmpeg_presets {
 		/**
 		 *  check if padding is needed
 		 */
+		if ($aspect_ratio != $new_aspect_ratio) {
+			if (FFMPEG_WRAPPER_DEBUG_PRINTS) {
+				echo ">> aspect ratio padding needed" . PHP_EOL;
+				echo ">>> in aspect: " . round($aspect_ratio,3) . PHP_EOL;
+				echo ">>> new aspect: " . round($new_aspect_ratio,3) . PHP_EOL;				
+			}
+
+			// 4x3 to 16x9
+			if ($aspect_ratio == 1.333 && $new_aspect_ratio == 1.778) {
+				echo ">>> will convert 4x3 to 16x9" . PHP_EOL;
+				$new_wide_width = intval($input_width * floatval(1+1/3));
+				$ffmpeg->video_filter->pad_center($new_wide_width,$input_heigth);
+			}
+
+			if ($aspect_ratio == 1.5 && $new_aspect_ratio == 1.778) {
+				echo ">>> will convert 3x2 to 16x9" . PHP_EOL;
+			}
+
+		}
 
 		/**
 		 *  scale to new given sizes
