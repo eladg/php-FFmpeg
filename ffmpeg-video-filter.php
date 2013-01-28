@@ -74,6 +74,22 @@ class ffmpeg_video_filter {
 		return $this->build();
 	}
 
+	public function add_simple_filter_with_filter($name,$values,$next_filter) {
+		$stream_id = $this->new_id();
+
+		$filter = new ffmpeg_filter();
+		$filter->id = $stream_id;
+		$filter->name = $name;
+		$filter->values = $values;
+		$filter->filter = $next_filter;
+
+		// chain algorithem
+		$filter->input_streams = array($this->last_stream);
+		$filter->output_streams = array($this->new_stream());
+
+		$this->push_filter($filter);
+	}
+
 	public function add_simple_filter($name,$values) {
 	
 		$stream_id = $this->new_id();
@@ -157,6 +173,95 @@ class ffmpeg_video_filter {
 
 	public function cropdetect($limit = 24,$round = 2,$reset = 0) {
 		$this->add_simple_filter("cropdetect",array($limit,$round,$reset));
+	}
+
+	public function select_iframes() {
+		$this->add_simple_filter("select",array("select=eq(pict_type\,I)"));
+	}
+
+	public function select_scence_frames($val) {
+		$this->add_simple_filter("select",array("gt(scene\," . $val . ")"));
+	}
+
+
+	public function hflip() {
+		$this->add_simple_filter("hflip",array());
+	}
+
+	public function vflip() {
+		$this->add_simple_filter("vflip",array());
+	}
+
+	public function fix_letterbox($letterbox_array,$width,$height) {
+		
+		if (!empty($letterbox_array)) {	
+			
+			$letterbox_flag = true;
+			if (FFMPEG_WRAPPER_DEBUG_PRINTS) {
+				echo ">> letterbox needed." . PHP_EOL;
+			}
+			
+			// add crop filter to filter-out the letterbox
+			//
+			// Multiple bugs here...
+
+			if ($width == 1280 && $height == 720) { 
+				$this->crop($letterbox_array["0"],
+							$letterbox_array["1"],
+							$letterbox_array["2"],
+							$letterbox_array["3"]
+				);
+			}
+
+		}
+	}
+
+	public function transpose($transpose_degree) {
+		switch ($transpose_degree) {
+			case 0:
+				return false;
+				break;
+			case 90: case 270:
+
+				$info = $this->ffmpeg_wrapper->last_input_info;
+				$currnet_width = $info["width"];
+				$current_height = $info["height"];
+
+				$new_width = intval($current_height * ($current_height / $currnet_width));
+				$new_heigth = intval($current_height);
+
+				$padcenter_filter = ffmpeg_filter::filter_with_params(
+					"pad",
+					array($currnet_width,$current_height,"(ow-iw)/2","(oh-ih)/2"),
+					array(),
+					array()
+				);
+				$scale_filter = ffmpeg_filter::filter_with_params(
+					"scale",
+					array($new_width,$new_heigth),
+					array(),
+					array(),
+					$padcenter_filter
+				);
+
+				$this->add_simple_filter_with_filter("transpose",array(1),$scale_filter);
+
+				if ($transpose_degree == 270) {
+					$this->hflip();				
+				}
+				return true;
+				break;
+			case 180:
+				$this->hflip();
+				$this->vflip();
+				return true;
+				break;
+
+			default:
+				return false;
+				break;
+		}
+		return false;
 	}
 
 	public function overlay($movie,$x,$y) {
