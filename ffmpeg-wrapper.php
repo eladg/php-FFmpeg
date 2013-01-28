@@ -5,6 +5,10 @@ require_once("ffmpeg-video.php");
 require_once("ffmpeg-audio.php");
 require_once("ffmpeg-video-filter.php");
 require_once("ffmpeg-filter-complex.php");
+require_once("ffmpeg-presets.php");
+define("DEFAULT_FFMPEG_PATH", "/usr/local/bin/ffmpeg");
+define("DEFAULT_FFPROBE_PATH", "/usr/local/bin/ffprobe");
+define("FFMPEG_WRAPPER_DEBUG_PRINTS", true);
 
 class ffmpeg_wrapper {
 
@@ -54,9 +58,11 @@ class ffmpeg_wrapper {
 		$config_arr = explode("configuration: ", $conf_string);
 		$this->configuration = explode("--", $config_arr[1]);
 		$this->response_junk_lines = count($ret)-1;
+		$this->response_junk_lines = count($ret);
 	}
 
 	public function __construct($path) {
+	public function __construct($path = DEFAULT_FFMPEG_PATH) {
 
 		$this->path = $path;
 
@@ -67,6 +73,8 @@ class ffmpeg_wrapper {
 		} else {
 			throw new Exception("ffmpeg_wrapper :: __construct() :: unsupported version: " . $version, 1);
 		}
+		// deal with multipel version
+		ffmpeg_wrapper::verify_supported_version($this->get_vertion());
 
 		// get the configure parameters
 		$this->set_configuration();
@@ -157,7 +165,10 @@ class ffmpeg_wrapper {
 		return $ret[0];
 	}
 
-	static public function supported_version($version) {
+	public function verify_supported_version($version) {
+
+		// set the version
+		$this->$version = $version;
 
 		if ($version == "ffmpeg version 1.0") {
 			return true;
@@ -170,6 +181,8 @@ class ffmpeg_wrapper {
 		if ($version == "ffmpeg version N-47767-g0f23634") {
 			return true;
 		}
+
+		throw new Exception("unsupported version: " . $version, 1);
 
 		return false;
 	}
