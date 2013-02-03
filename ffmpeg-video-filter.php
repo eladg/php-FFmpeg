@@ -194,18 +194,15 @@ class ffmpeg_video_filter {
 
 	public function fix_letterbox($letterbox_array,$width,$height) {
 		
+		$flag = false;
 		if (!empty($letterbox_array)) {	
-			
-			$letterbox_flag = true;
-			if (FFMPEG_WRAPPER_DEBUG_PRINTS) {
-				echo ">> letterbox needed." . PHP_EOL;
-			}
 			
 			// add crop filter to filter-out the letterbox
 			//
 			// Multiple bugs here...
 
 			if ($width == 1280 && $height == 720) { 
+				$flag = true;			
 				$this->crop($letterbox_array["0"],
 							$letterbox_array["1"],
 							$letterbox_array["2"],
@@ -214,6 +211,8 @@ class ffmpeg_video_filter {
 			}
 
 		}
+
+		return $flag;
 	}
 
 	public function transpose($transpose_degree) {

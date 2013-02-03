@@ -202,7 +202,7 @@ class ffmpeg_wrapper {
 		$ffmpeg->audio->disable();
 		$ffmpeg->video->length(50);
 		$ffmpeg->video->format("rawvideo");
-		$ffmpeg->video_filter->cropdetect(24,2,0);
+		$ffmpeg->video_filter->cropdetect(16,2,0);
 		$ffmpeg->set_output("/dev/null");
 		$ffmpeg->run();
 

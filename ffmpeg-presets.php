@@ -56,6 +56,11 @@ class ffmpeg_presets {
 		/**
 		 *  fix letterbox videos
 		 */
+
+		// fix letter box is still expermental:
+		//****************************************
+		// TODOs: verify on: youtube clip: c07RBO1cahQ and others
+
 		$letterbox_array = ffmpeg_wrapper::analyze_letterbox_video($file);
 		if ($ffmpeg->video_filter->fix_letterbox($letterbox_array,$new_width,$new_height)) {
 			if (FFMPEG_WRAPPER_DEBUG_PRINTS) {
