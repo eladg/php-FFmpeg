@@ -18,6 +18,10 @@ class ffmpeg_parameter {
 			return "-" . $this->key;
 		}
 	}
+
+	public function get_string_for_path() {
+		return "-" . $this->key . " \"" . $this->value . "\"";	
+	}
 }
 
 ?>

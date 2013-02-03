@@ -106,9 +106,10 @@ class ffmpeg_wrapper {
 		}
 
 		foreach ($this->input as $input_param) {
+
 			if (!file_exists($input_param->value)) {
 				throw new Exception("ffmpeg_wrapper :: input file does not exist (" . $input_param->value . ")", 1);
-			}
+			} 
 		}
 
 		return true;
@@ -128,7 +129,7 @@ class ffmpeg_wrapper {
 
 		// input files:
 		foreach ($this->input as $input_param) {
-			$str .= $input_param->get_string() . " ";
+			$str .= $input_param->get_string_for_path() . " ";
 		}
 
 		if ($this->video_filter_complex_flag) {
@@ -142,7 +143,7 @@ class ffmpeg_wrapper {
 		$str .= $this->audio->get_string();
 		
 		// set outputs
-		$str .= $this->output . " ";
+		$str .= "\"" . $this->output . "\"" . " ";
 		$str .= "2>&1";
 
 		return $str;
@@ -301,7 +302,7 @@ class ffmpeg_wrapper {
 	}
 
 	public function add_input($input_file) {
-		array_push($this->input, new ffmpeg_parameter("i", "\"" . $input_file . "\""));
+		array_push($this->input, new ffmpeg_parameter("i", $input_file));
 		$this->last_input_info = ffmpeg_wrapper::video_stream_info($input_file);
 	}
 
