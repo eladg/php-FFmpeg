@@ -34,7 +34,8 @@ class ffmpeg_wrapper {
 	private $global_attribs;
 	public $video;
 	public $audio;
-	public $last_input_info;
+	public $last_input_info_video;
+	public $last_input_info_audio;
 
 	// ffmpeg filters
 	public $video_filter;
@@ -163,7 +164,12 @@ class ffmpeg_wrapper {
 		$toexec = DEFAULT_FFPROBE_PATH . " -show_streams -print_format json -v quiet " . $file;
 		exec($toexec, $ret, $val);
 
-		return json_decode(implode($ret), true);
+		$stream_arr = json_decode(implode($ret), true);
+		if (!empty($stream_arr)) {
+			return json_decode(implode($ret), true);
+		} else {
+			return NULL;
+		}
 	}
 
 	public static function video_stream_info($file) {
@@ -175,7 +181,12 @@ class ffmpeg_wrapper {
 		exec($toexec, $ret, $val);
 
 		$stream_arr = json_decode(implode($ret), true);
-		return $stream_arr["streams"]["0"];
+		if (!empty($stream_arr["streams"]["0"])) {
+			return $stream_arr["streams"]["0"];
+		} else {
+			return NULL;
+		}
+
 	}
 
 	public static function audio_stream_info($file) {
@@ -187,7 +198,11 @@ class ffmpeg_wrapper {
 		exec($toexec, $ret, $val);
 
 		$stream_arr = json_decode(implode($ret), true);
-		return $stream_arr["streams"]["0"];
+		if (!empty($stream_arr["streams"]["0"])) {
+			return $stream_arr["streams"]["0"];
+		} else {
+			return NULL;
+		}
 	}
 
 	public static function analyze_letterbox_video($file) {
@@ -303,7 +318,8 @@ class ffmpeg_wrapper {
 
 	public function add_input($input_file) {
 		array_push($this->input, new ffmpeg_parameter("i", $input_file));
-		$this->last_input_info = ffmpeg_wrapper::video_stream_info($input_file);
+		$this->last_input_info_video = ffmpeg_wrapper::video_stream_info($input_file);
+		$this->last_input_info_audio = ffmpeg_wrapper::audio_stream_info($input_file);
 	}
 
 	public function add_concatenate_input($input_file) {

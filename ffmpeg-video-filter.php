@@ -183,7 +183,6 @@ class ffmpeg_video_filter {
 		$this->add_simple_filter("select",array("gt(scene\," . $val . ")"));
 	}
 
-
 	public function hflip() {
 		$this->add_simple_filter("hflip",array());
 	}
@@ -222,7 +221,7 @@ class ffmpeg_video_filter {
 				break;
 			case 90: case 270:
 
-				$info = $this->ffmpeg_wrapper->last_input_info;
+				$info = $this->ffmpeg_wrapper->last_input_info_video;
 				$currnet_width = $info["width"];
 				$current_height = $info["height"];
 

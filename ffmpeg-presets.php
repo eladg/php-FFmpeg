@@ -23,6 +23,7 @@ class ffmpeg_presets {
 
 		$ffmpeg = new ffmpeg_wrapper();
 
+		$ffmpeg->add_input($file);
 		$ffmpeg->add_global_param("ss",$start);
 
 		$ffmpeg->video->encoding("copy");
