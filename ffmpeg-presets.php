@@ -26,8 +26,13 @@ class ffmpeg_presets {
 		$ffmpeg->add_input($file);
 		$ffmpeg->add_global_param("ss",$start);
 
+		// encoding
 		$ffmpeg->video->encoding("copy");
 		$ffmpeg->audio->encoding("copy");
+
+		// qscale
+		$ffmpeg->audio->qscale("0");
+		$ffmpeg->video->qscale("0");
 
 		$ffmpeg->video->length($length);
 
