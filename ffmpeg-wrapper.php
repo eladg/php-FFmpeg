@@ -1,5 +1,6 @@
 <?php
 
+require_once("ffmpeg-utils.php");
 require_once("ffmpeg-parameter.php");
 require_once("ffmpeg-video.php");
 require_once("ffmpeg-audio.php");
@@ -155,136 +156,6 @@ class ffmpeg_wrapper {
 	// ** ffmpeg_wrapper :: public functions 															** //
 	// *************************************************************************************************** //
 
-	public static function streams_info($file) {
-
-		if (!file_exists(DEFAULT_FFPROBE_PATH)) {
-			throw new Exception("Can't locate ffprobe, using default location (" . DEFAULT_FFPROBE_PATH . ")", 1);
-		}
-
-		$toexec = DEFAULT_FFPROBE_PATH . " -show_streams -print_format json -v quiet " . $file;
-		exec($toexec, $ret, $val);
-
-		$stream_arr = json_decode(implode($ret), true);
-		if (!empty($stream_arr)) {
-			return json_decode(implode($ret), true);
-		} else {
-			return NULL;
-		}
-	}
-
-	public static function video_stream_info($file) {
-		if (!file_exists(DEFAULT_FFPROBE_PATH)) {
-			throw new Exception("Can't locate ffprobe, using default location (" . DEFAULT_FFPROBE_PATH . ")", 1);
-		}
-
-		$toexec = DEFAULT_FFPROBE_PATH . " -show_streams -select_streams v -print_format json -v quiet " . $file;
-		exec($toexec, $ret, $val);
-
-		$stream_arr = json_decode(implode($ret), true);
-		if (!empty($stream_arr["streams"]["0"])) {
-			return $stream_arr["streams"]["0"];
-		} else {
-			return NULL;
-		}
-
-	}
-
-	public static function audio_stream_info($file) {
-		if (!file_exists(DEFAULT_FFPROBE_PATH)) {
-			throw new Exception("Can't locate ffprobe, using default location (" . DEFAULT_FFPROBE_PATH . ")", 1);
-		}
-
-		$toexec = DEFAULT_FFPROBE_PATH . " -show_streams -select_streams a -print_format json -v quiet " . $file;
-		exec($toexec, $ret, $val);
-
-		$stream_arr = json_decode(implode($ret), true);
-		if (!empty($stream_arr["streams"]["0"])) {
-			return $stream_arr["streams"]["0"];
-		} else {
-			return NULL;
-		}
-	}
-
-	public static function analyze_letterbox_video($file) {
-
-		$info = ffmpeg_wrapper::video_stream_info($file);
-		$duration = $info["duration"];
-
-		$ffmpeg = new ffmpeg_wrapper();
-		// $ffmpeg->add_global_param("ss",floor($duration/2));
-		$ffmpeg->add_input($file);
-
-		$ffmpeg->audio->disable();
-		$ffmpeg->video->length(50);
-		$ffmpeg->video->format("rawvideo");
-		$ffmpeg->video_filter->cropdetect(16,2,0);
-		$ffmpeg->set_output("/dev/null");
-		$ffmpeg->run();
-
-		$crop_string_array = array();		
-		foreach ($ffmpeg->response_string as $string) {
-			
-			// if the string include
-			if (strpos($string,'crop') !== false) {
-				$splitString = explode(" crop=", $string);
-				array_push($crop_string_array, $splitString[1]);
-			}
-		}
-
-		// find most common crop recommendation
-		$crop_map = array();
-		$common_crop = $crop_string_array[0];
-		$common_crop_count = 1;
-
-		for ($i = 0 ; $i < sizeof($crop_string_array) ; $i++) {
-			$current = $crop_string_array[$i];
-			if (!isset($crop_map[$current])) {
-				$crop_map[$current] = 1;
-			} else {
-				$crop_map[$current]++;
-			}
-			if ($crop_map[$current] > $common_crop_count) {
-				$common_crop = $current;
-				$common_crop_count = $crop_map[$current];
-			}
-		}
-
-		if (FFMPEG_WRAPPER_DEBUG_PRINTS) {
-			// echo "most common crop: " . $common_crop . PHP_EOL;
-		}
-
-		// check if crop is needed:
-		$frame_size = explode(":", $common_crop);
-		$aspect_ratio = explode(":", $info["display_aspect_ratio"]);
-		
-		$ratio = $aspect_ratio[0] / $aspect_ratio[1];
-		$crop_ratio = $frame_size[0] / $frame_size[1];
-
-		if (FFMPEG_WRAPPER_DEBUG_PRINTS) {
-			// echo "input - width  = " . $info["width"] . PHP_EOL;
-			// echo "input - height = " . $info["height"] . PHP_EOL;
-			// echo "input - aspect ratio = " . $ratio . PHP_EOL;
-			// echo "crop frame - width  = " . $frame_size[0] . PHP_EOL;
-			// echo "crop frame - heigth = " . $frame_size[1] . PHP_EOL;
-			// echo "crop frame - aspect ratio = " . $crop_ratio . PHP_EOL;
-		}
-
-		if ($frame_size[0] != $info["width"] || $frame_size[1] != $info["height"]) {
-			return explode(":", $common_crop);
-		}
-
-		return null;
-	}
-
-	public static function analyze_rotation($file) {
-
-		$info = ffmpeg_wrapper::video_stream_info($file);
-		if (isset($info["tags"]["rotate"])) {
-			return intval($info["tags"]["rotate"]);
-		}
-		return intval(-1);
-	}
-
 	public function get_vertion() {
 		exec( $this->path . " -version" , $ret);
 		return $ret[0];
@@ -303,7 +174,7 @@ class ffmpeg_wrapper {
 			return true;
 		}
 
-		if ($version == "ffmpeg version N-47767-g0f23634") {
+		if ($version == "ffmpeg version 1.1.2") {
 			return true;
 		}
 
@@ -447,6 +318,199 @@ class ffmpeg_wrapper {
 		$this->set_start_from($head);
 		$this->video->length($tail - $head);
 	}
+
+
+	// *************************************************************************************************** //
+	// ** ffmpeg_wrapper :: public static functions 													** //
+	// *************************************************************************************************** //
+
+	public static function streams_info($file) {
+
+		if (!file_exists(DEFAULT_FFPROBE_PATH)) {
+			throw new Exception("Can't locate ffprobe, using default location (" . DEFAULT_FFPROBE_PATH . ")", 1);
+		}
+
+		$toexec = DEFAULT_FFPROBE_PATH . " -show_streams -print_format json -v quiet " . $file;
+		exec($toexec, $ret, $val);
+
+		$stream_arr = json_decode(implode($ret), true);
+		if (!empty($stream_arr)) {
+			return json_decode(implode($ret), true);
+		} else {
+			return NULL;
+		}
+	}
+
+	public static function video_stream_info($file) {
+		if (!file_exists(DEFAULT_FFPROBE_PATH)) {
+			throw new Exception("Can't locate ffprobe, using default location (" . DEFAULT_FFPROBE_PATH . ")", 1);
+		}
+
+		$toexec = DEFAULT_FFPROBE_PATH . " -show_streams -select_streams v -print_format json -v quiet " . $file;
+		exec($toexec, $ret, $val);
+
+		$stream_arr = json_decode(implode($ret), true);
+		if (!empty($stream_arr["streams"]["0"])) {
+			return $stream_arr["streams"]["0"];
+		} else {
+			return NULL;
+		}
+
+	}
+
+	public static function audio_stream_info($file) {
+		if (!file_exists(DEFAULT_FFPROBE_PATH)) {
+			throw new Exception("Can't locate ffprobe, using default location (" . DEFAULT_FFPROBE_PATH . ")", 1);
+		}
+
+		$toexec = DEFAULT_FFPROBE_PATH . " -show_streams -select_streams a -print_format json -v quiet " . $file;
+		exec($toexec, $ret, $val);
+
+		$stream_arr = json_decode(implode($ret), true);
+		if (!empty($stream_arr["streams"]["0"])) {
+			return $stream_arr["streams"]["0"];
+		} else {
+			return NULL;
+		}
+	}
+
+	public static function analyze_letterbox_video($file) {
+
+		$info = ffmpeg_wrapper::video_stream_info($file);
+		$duration = $info["duration"];
+
+		$ffmpeg = new ffmpeg_wrapper();
+		// $ffmpeg->add_global_param("ss",floor($duration/2));
+		$ffmpeg->add_input($file);
+
+		$ffmpeg->audio->disable();
+		$ffmpeg->video->length(50);
+		$ffmpeg->video->format("rawvideo");
+		$ffmpeg->video_filter->cropdetect(16,2,0);
+		$ffmpeg->set_output("/dev/null");
+		$ffmpeg->run();
+
+		$crop_string_array = array();		
+		foreach ($ffmpeg->response_string as $string) {
+			
+			// if the string include
+			if (strpos($string,'crop') !== false) {
+				$splitString = explode(" crop=", $string);
+				array_push($crop_string_array, $splitString[1]);
+			}
+		}
+
+		// find most common crop recommendation
+		$crop_map = array();
+		$common_crop = $crop_string_array[0];
+		$common_crop_count = 1;
+
+		for ($i = 0 ; $i < sizeof($crop_string_array) ; $i++) {
+			$current = $crop_string_array[$i];
+			if (!isset($crop_map[$current])) {
+				$crop_map[$current] = 1;
+			} else {
+				$crop_map[$current]++;
+			}
+			if ($crop_map[$current] > $common_crop_count) {
+				$common_crop = $current;
+				$common_crop_count = $crop_map[$current];
+			}
+		}
+
+		if (FFMPEG_WRAPPER_DEBUG_PRINTS) {
+			// echo "most common crop: " . $common_crop . PHP_EOL;
+		}
+
+		// check if crop is needed:
+		$frame_size = explode(":", $common_crop);
+		$aspect_ratio = explode(":", $info["display_aspect_ratio"]);
+		
+		$ratio = $aspect_ratio[0] / $aspect_ratio[1];
+		$crop_ratio = $frame_size[0] / $frame_size[1];
+
+		if (FFMPEG_WRAPPER_DEBUG_PRINTS) {
+			// echo "input - width  = " . $info["width"] . PHP_EOL;
+			// echo "input - height = " . $info["height"] . PHP_EOL;
+			// echo "input - aspect ratio = " . $ratio . PHP_EOL;
+			// echo "crop frame - width  = " . $frame_size[0] . PHP_EOL;
+			// echo "crop frame - heigth = " . $frame_size[1] . PHP_EOL;
+			// echo "crop frame - aspect ratio = " . $crop_ratio . PHP_EOL;
+		}
+
+		if ($frame_size[0] != $info["width"] || $frame_size[1] != $info["height"]) {
+			return explode(":", $common_crop);
+		}
+
+		return null;
+	}
+
+	public static function analyze_rotation($file) {
+
+		$info = ffmpeg_wrapper::video_stream_info($file);
+		if (isset($info["tags"]["rotate"])) {
+			return intval($info["tags"]["rotate"]);
+		}
+		return intval(-1);
+	}
+
+	// *************************************************************************************************** //
+	// ** ffmpeg_wrapper :: batch functions 		 													** //
+	// *************************************************************************************************** //
+
+	public function fix_letterbox($file,$new_width,$new_height) {
+		$letterbox_array = ffmpeg_wrapper::analyze_letterbox_video($file);
+		if ($this->video_filter->fix_letterbox($letterbox_array, $new_width, $new_height)) {
+			if (FFMPEG_WRAPPER_DEBUG_PRINTS) {
+				echo ">> letterbox needed" . PHP_EOL;
+			}
+		} else {
+			if (FFMPEG_WRAPPER_DEBUG_PRINTS) {
+				echo ">> no letterbox needed" . PHP_EOL;
+			}
+		}		
+	}
+
+	public function fix_vertical($file) {
+		$transpose_degree = ffmpeg_wrapper::analyze_rotation($file);
+		if ($this->video_filter->transpose($transpose_degree)) {
+			if (FFMPEG_WRAPPER_DEBUG_PRINTS) {
+				echo ">> transpose needed" . PHP_EOL;
+			}
+		} else {
+			if (FFMPEG_WRAPPER_DEBUG_PRINTS) {
+				echo ">> no transpose needed" . PHP_EOL;
+			}
+		}
+	}
+
+	public function fix_aspect_ratio_blur($aspect_ratio, $new_aspect_ratio) {
+		if ($aspect_ratio != $new_aspect_ratio) {
+			echo ">> fix_aspect_ratio_blur" . PHP_EOL;
+		}
+	}
+
+	public function fix_aspect_ratio_normal($aspect_ratio, $new_aspect_ratio) {
+		if ($aspect_ratio != $new_aspect_ratio) {
+			if (FFMPEG_WRAPPER_DEBUG_PRINTS) {
+				echo ">> aspect ratio padding needed" . PHP_EOL;
+				echo ">>> in aspect: " . round($aspect_ratio,3) . PHP_EOL;
+				echo ">>> new aspect: " . round($new_aspect_ratio,3) . PHP_EOL;				
+			}
+
+			// 4:3 to 16:9
+			if ($aspect_ratio == 1.333 && $new_aspect_ratio == 1.778) {
+				echo ">>> will convert 4x3 to 16x9" . PHP_EOL;
+				$new_wide_width = intval($input_width * floatval(1+1/3));
+				$this->video_filter->pad_center($new_wide_width,$input_heigth);
+			}
+
+			if ($aspect_ratio == 1.5 && $new_aspect_ratio == 1.778) {
+				echo ">>> will convert 3x2 to 16x9" . PHP_EOL;
+			}
+		}		
+	}
+
 }
 
 ?>
