@@ -1,6 +1,7 @@
 <?php
 
 require_once("ffmpeg-wrapper.php");
+require_once("ffmpeg-utils.php");
 
 class ffmpeg_presets {
 
@@ -40,6 +41,56 @@ class ffmpeg_presets {
 
 	}
 
+	static function split_screen_video($files) {
+
+		$total = count($files);
+
+		// @TODO: dynamic size needed
+		$input_size = new ffmpeg_size(1280,720);
+
+		// @TODO: 	find/get the length of the longest movie
+		// 			alternatively, use something like -shortest to 'movie=' filter
+		$ffmpeg = ffmpeg_presets::empty_movie($input_size->to_string(), 300);
+
+		// find the size of the cube
+		if (in_array($total, range(1, 4))) {
+			$cube = 2;
+		} else if (in_array($total, range(5, 9))) {
+			$cube = 3;
+		} else if (in_array($total, range(10, 16))) {
+			$cube = 4;
+		} else {
+			$cube = 1;
+		}
+
+		$output_w = $input_size->width / $cube;
+		$output_h = $input_size->heigth / $cube;
+
+		// from top to bottom, left to right
+		$points = array();
+		for ($i=0; $i < $total ; $i++) { 
+			$row = floor($i / $cube);
+			$colm = ($i % $cube);
+
+			$px = round($colm*$output_w);
+			$py = round($row*$output_h);
+			
+			// echo $row . ":" . $colm . "\t" . $px . ":" . $py . PHP_EOL;
+			$points[$i] = new ffmpeg_point($colm*$output_w,$row*$output_h);
+
+			$ffmpeg->video_filter->overlay_with_filters(
+				$files[$i],
+				$points[$i]->x,
+				$points[$i]->y,
+				ffmpeg_filter::scale($input_size->width/$cube,$input_size->heigth/$cube)
+			);
+
+		}
+
+		return $ffmpeg;
+
+	}
+
 	static function video_consolidator($file, $new_width, $new_height) {
 
 		$ffmpeg = new ffmpeg_wrapper();
@@ -49,11 +100,6 @@ class ffmpeg_presets {
 
 		// initialize flags
 		$info = ffmpeg_wrapper::video_stream_info($file);
-		$letterbox_flag = false;
-		$transpose_flag = false;
-		$scale_flag     = false;
-		$pad_flag       = false;
-
 		$input_width      = intval($info["width"]);
 		$input_heigth     = intval($info["height"]);
 		$aspect_ratio     = round(floatval($input_width / $input_heigth),3);
@@ -62,65 +108,22 @@ class ffmpeg_presets {
 		/**
 		 *  fix letterbox videos
 		 */
-
-		// fix letter box is still expermental:
-		//****************************************
-		// TODOs: verify on: youtube clip: c07RBO1cahQ and others
-
-		$letterbox_array = ffmpeg_wrapper::analyze_letterbox_video($file);
-		if ($ffmpeg->video_filter->fix_letterbox($letterbox_array,$new_width,$new_height)) {
-			if (FFMPEG_WRAPPER_DEBUG_PRINTS) {
-				echo ">> letterbox needed" . PHP_EOL;
-			}
-		} else {
-			if (FFMPEG_WRAPPER_DEBUG_PRINTS) {
-				echo ">> no letterbox needed" . PHP_EOL;
-			}
-		}
+		$ffmpeg->fix_letterbox($file,$new_width,$new_height);
 
 		/**
 		 *  convert vertical videos
 		 */
-		$transpose_degree = ffmpeg_wrapper::analyze_rotation($file);
-		if ($ffmpeg->video_filter->transpose($transpose_degree)) {
-			if (FFMPEG_WRAPPER_DEBUG_PRINTS) {
-				echo ">> transpose needed" . PHP_EOL;
-			}
-		} else {
-			if (FFMPEG_WRAPPER_DEBUG_PRINTS) {
-				echo ">> no transpose needed" . PHP_EOL;
-			}
-		}
+		$ffmpeg->fix_vertical($file);
 
 		/**
 		 *  check if padding is needed
 		 */
-		if ($aspect_ratio != $new_aspect_ratio) {
-			if (FFMPEG_WRAPPER_DEBUG_PRINTS) {
-				echo ">> aspect ratio padding needed" . PHP_EOL;
-				echo ">>> in aspect: " . round($aspect_ratio,3) . PHP_EOL;
-				echo ">>> new aspect: " . round($new_aspect_ratio,3) . PHP_EOL;				
-			}
-
-			// 4x3 to 16x9
-			if ($aspect_ratio == 1.333 && $new_aspect_ratio == 1.778) {
-				echo ">>> will convert 4x3 to 16x9" . PHP_EOL;
-				$new_wide_width = intval($input_width * floatval(1+1/3));
-				$ffmpeg->video_filter->pad_center($new_wide_width,$input_heigth);
-			}
-
-			if ($aspect_ratio == 1.5 && $new_aspect_ratio == 1.778) {
-				echo ">>> will convert 3x2 to 16x9" . PHP_EOL;
-			}
-
-		}
+		$ffmpeg->fix_aspect_ratio_normal($aspect_ratio, $new_aspect_ratio);
 
 		/**
 		 *  scale to new given sizes
-		 */
-		
+		 */		
 		if ( $input_width != $new_width || $input_heigth != $new_height	) {
-			$scale_flag = true;
 			if (FFMPEG_WRAPPER_DEBUG_PRINTS) {
 				echo ">> scale needed" . PHP_EOL;
 			}
@@ -128,15 +131,7 @@ class ffmpeg_presets {
 		} else {
 			if (FFMPEG_WRAPPER_DEBUG_PRINTS) {
 				echo ">> no scale needed" . PHP_EOL;
-				echo ">>> "; 
-				echo "input: " . $input_width . "x" . $input_heigth . PHP_EOL;
-				echo ">>> "; 
-				echo "new_scale: " . $new_width . "x" . $new_height . PHP_EOL;
 			}
-		}
-
-		if (FFMPEG_WRAPPER_DEBUG_PRINTS) {
-			echo PHP_EOL;
 		}
 
 		return $ffmpeg;
