@@ -87,3 +87,23 @@ $ffmpeg->video_filter->overlay("input_4.png",640,360);
 $ffmpeg->run();
 ?>
 ```
+
+### Split screen CUBED video
+
+```php
+<?php
+
+$files = array (
+	"files/movie0.mp4",
+	"files/movie1.mp4",
+	"files/movie2.mp4",
+	"files/movie3.mp4",
+);
+
+$ffmpeg = ffmpeg_presets::split_screen_video($files);
+$ffmpeg->set_output("video.mp4");
+
+$ffmpeg->run();
+
+?>
+```
