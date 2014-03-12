@@ -91,7 +91,6 @@ class ffmpeg_wrapper {
 	private function default_global_attribs() {
 		$attribs = array();
 		array_push($attribs, new ffmpeg_parameter("y"));
-		array_push($attribs, new ffmpeg_parameter("shortest"));
 
 		return $attribs;
 	}
@@ -162,6 +161,7 @@ class ffmpeg_wrapper {
 	}
 
 	public function verify_supported_version($version) {
+		return true;
 
 		// set the version
 		$this->$version = $version;
